@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:www.g2a.com)",
+      "Bash(npm run:*)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(find /d/pay-bee/apps/web -type f \\\\\\(-name *.json -o -name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(node -e \"require\\(''''d:/pay-bee/node_modules/bcryptjs''''\\)\")",
+      "Bash(node -e \"require\\(''''d:/pay-bee/apps/api/node_modules/bcryptjs''''\\)\")",
+      "Bash(ls d:/pay-bee/apps/web/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(xargs grep:*)",
+      "Bash(find d:/pay-bee/apps/web/app/catalog -type f -name *.tsx -o -name *.ts)"
+    ]
+  }
+}

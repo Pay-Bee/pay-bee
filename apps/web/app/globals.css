@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+:root {
+  --background: #080810;
+  --foreground: #ededed;
+  --yellow: #fbbf24;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Game card ───────────────────────────────────────────────── */
+.game-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.game-card:hover {
+  transform: scale(1.03) translateY(-2px);
+  box-shadow: 0 0 0 2px #fbbf24, 0 16px 40px rgba(251, 191, 36, 0.22);
+  border-color: #fbbf24 !important;
+}
+.game-card:hover .game-card-img {
+  transform: scale(1.06);
+}
+.game-card-img {
+  transition: transform 0.35s ease;
+}
+
+/* ── Banner animations ───────────────────────────────────────── */
+@keyframes bannerContentIn {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes progressFill {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.banner-content-enter {
+  animation: bannerContentIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.banner-progress-bar {
+  height: 3px;
+  background: #fbbf24;
+  animation: progressFill 5s linear both;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+/* ── Auth page animations ──────────────────────────────────── */
+@keyframes gridScroll {
+  0%   { background-position: 0 0; }
+  100% { background-position: 60px 60px; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.15); }
+  50%       { box-shadow: 0 0 40px rgba(251, 191, 36, 0.35); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+.auth-bg {
+  background-color: #080810;
+  background-image:
+    linear-gradient(rgba(251, 191, 36, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(251, 191, 36, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridScroll 8s linear infinite;
+}
+
+.auth-card      { animation: fadeInUp 0.5s ease both; }
+.auth-logo      { animation: float 4s ease-in-out infinite; }
+.auth-card-glow { animation: pulseGlow 3s ease-in-out infinite; }
+
+.shimmer-btn {
+  background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 25%, #fde68a 50%, #f59e0b 75%, #fbbf24 100%);
+  background-size: 200% auto;
+  transition: background-position 0.4s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.shimmer-btn:hover {
+  background-position: right center;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.4);
+}
+.shimmer-btn:active { transform: translateY(0); }
+
+.input-field {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.input-field:focus {
+  outline: none;
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.04);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.08);
+}

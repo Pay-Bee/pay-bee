@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env*
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+apps/web/build/
+
+# TypeScript
+*.tsbuildinfo
+apps/web/next-env.d.ts
+
+# Build output
+apps/api/dist/
+
+# Testing
+coverage/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# Certificates
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
