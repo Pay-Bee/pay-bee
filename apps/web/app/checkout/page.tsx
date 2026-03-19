@@ -468,9 +468,11 @@ function CheckoutContent() {
                           >
                             {active && <span className="w-1.5 h-1.5 rounded-full bg-black" />}
                           </span>
-                          <span className="text-sm font-extrabold" style={{ color: info.color }}>
-                            {info.label}
-                          </span>
+                          <img
+                            src={`/payment-opt/${gw}.png`}
+                            alt={gw}
+                            className="h-5 w-auto object-contain"
+                          />
                         </div>
                         <div className="text-right">
                           <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>

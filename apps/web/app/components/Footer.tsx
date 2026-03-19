@@ -7,7 +7,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <h3 className="text-2xl font-black tracking-widest text-yellow-400 uppercase mb-2">PayBee</h3>
+            <img src="/logo/pay-bee-logo.png" alt="Pay-Bee" className="h-9 w-auto mb-2" />
             <p className="text-sm leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.35)", maxWidth: "200px" }}>
               Sri Lanka&apos;s gaming marketplace. Buy PC games in LKR, instantly.
             </p>
@@ -66,7 +66,7 @@ export default function Footer() {
           style={{ borderColor: "rgba(255,255,255,0.06)" }}
         >
           <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
-            © {new Date().getFullYear()} PayBee. All rights reserved.
+            © {new Date().getFullYear()} Pay-Bee. All rights reserved.
           </span>
           <div className="flex items-center gap-4 text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
             <span className="flex items-center gap-1">

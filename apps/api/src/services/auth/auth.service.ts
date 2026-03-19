@@ -170,13 +170,13 @@ export async function getCustomerProfile(customerId: number): Promise<{
   };
 }
 
-// ── Update customer profile ────────────────────────────────────
+// ── Update customer profile (name + email) ────────────────────
 export async function updateCustomerProfile(
   customerId: number,
-  data: { name?: string; email?: string; currentPassword?: string; newPassword?: string }
+  data: { name?: string; email?: string }
 ): Promise<void> {
   const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT email, password, registration_type FROM customers WHERE id = ? AND active = TRUE",
+    "SELECT email FROM customers WHERE id = ? AND active = TRUE",
     [customerId]
   );
   if (rows.length === 0) throw new Error("Customer not found");
@@ -200,23 +200,38 @@ export async function updateCustomerProfile(
     values.push(data.email);
   }
 
-  if (data.newPassword) {
-    if (current.registration_type === "GOOGLE") {
-      throw new Error("Cannot set password for Google accounts");
-    }
-    if (!data.currentPassword) throw new Error("Current password is required");
-    const valid = await bcrypt.compare(data.currentPassword, current.password as string);
-    if (!valid) throw new Error("Current password is incorrect");
-    fields.push("password = ?");
-    values.push(await bcrypt.hash(data.newPassword, 12));
-  }
-
   if (fields.length === 0) return;
 
   values.push(customerId);
   await pool.execute(
     `UPDATE customers SET ${fields.join(", ")}, updated_at = NOW() WHERE id = ?`,
     values as string[]
+  );
+}
+
+// ── Change password ────────────────────────────────────────────
+export async function changePassword(
+  customerId: number,
+  data: { currentPassword: string; newPassword: string }
+): Promise<void> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT password, registration_type FROM customers WHERE id = ? AND active = TRUE",
+    [customerId]
+  );
+  if (rows.length === 0) throw new Error("Customer not found");
+  const current = rows[0];
+
+  if (current.registration_type === "GOOGLE") {
+    throw new Error("Cannot set password for Google accounts");
+  }
+  if (!data.currentPassword) throw new Error("Current password is required");
+  const valid = await bcrypt.compare(data.currentPassword, current.password as string);
+  if (!valid) throw new Error("Current password is incorrect");
+
+  const hash = await bcrypt.hash(data.newPassword, 12);
+  await pool.execute(
+    "UPDATE customers SET password = ?, updated_at = NOW() WHERE id = ?",
+    [hash, customerId]
   );
 }
 

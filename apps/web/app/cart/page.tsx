@@ -291,9 +291,7 @@ export default function CartPage() {
                   className="flex items-center justify-between rounded-xl px-3 py-2.5"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,107,53,0.2)" }}
                 >
-                  <span className="text-sm font-extrabold tracking-tight" style={{ color: "#ff6b35" }}>
-                    payzy
-                  </span>
+                  <img src="/payment-opt/payzy.png" alt="Payzy" className="h-5 w-auto object-contain" />
                   <div className="text-right">
                     <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>4 easy installments</p>
                     <p className="text-xs font-bold text-white">
@@ -307,9 +305,7 @@ export default function CartPage() {
                   className="flex items-center justify-between rounded-xl px-3 py-2.5"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(0,200,83,0.2)" }}
                 >
-                  <span className="text-sm font-extrabold tracking-tight" style={{ color: "#00c853" }}>
-                    koko
-                  </span>
+                  <img src="/payment-opt/koko.png" alt="Koko" className="h-5 w-auto object-contain" />
                   <div className="text-right">
                     <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>3 easy installments</p>
                     <p className="text-xs font-bold text-white">

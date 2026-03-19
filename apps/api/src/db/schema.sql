@@ -84,6 +84,14 @@ CREATE TABLE IF NOT EXISTS orders (
   FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
 
+CREATE TABLE IF NOT EXISTS game_requests (
+  id            BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  customer_id   BIGINT UNSIGNED  NOT NULL,
+  request_text  VARCHAR(512)     NOT NULL,
+  created_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
 CREATE TABLE IF NOT EXISTS order_items (
   id               BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT PRIMARY KEY,
   order_id         BIGINT UNSIGNED  NOT NULL,

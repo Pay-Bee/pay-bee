@@ -128,3 +128,45 @@ body {
   background: rgba(251, 191, 36, 0.04);
   box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.08);
 }
+
+/* ── Help page animations ──────────────────────────────────── */
+@keyframes stepReveal {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.3; transform: translateX(0); }
+  50%       { opacity: 1;   transform: translateX(6px); }
+}
+
+@keyframes arrowPulseDown {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50%       { opacity: 1;   transform: translateY(6px); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+  50%       { box-shadow: 0 0 24px 4px rgba(251,191,36,0.18); }
+}
+
+@keyframes trustBadgeIn {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.step-revealed {
+  animation: stepReveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.step-arrow {
+  animation: arrowPulse 1.6s ease-in-out infinite;
+}
+.step-arrow-down {
+  animation: arrowPulseDown 1.6s ease-in-out infinite;
+}
+.trust-badge-in {
+  animation: trustBadgeIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.step-icon-glow {
+  animation: glowPulse 2.8s ease-in-out infinite;
+}

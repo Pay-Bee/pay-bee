@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import Navbar from "./components/Navbar";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PayBee — Epic Games LK Marketplace",
-  description: "Buy Epic Games titles in LKR with local installment payment options",
+  title: "PayBee",
+  description:
+    "Buy Epic Games titles in LKR with local installment payment options",
+  icons: {
+    icon: "/logo/pay-bee-icon.png",
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-[#0f0f0f] text-white antialiased">

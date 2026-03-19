@@ -8,6 +8,7 @@ import cartRoutes from "../services/cart/cart.routes";
 import catalogRoutes from "../services/catalog/catalog.routes";
 import orderRoutes from "../services/order/order.routes";
 import webhookRoutes from "../services/order/webhook.routes";
+import gameRequestRoutes from "../services/game-requests/game-request.routes";
 import { rateLimiter } from "./middleware/rateLimit.middleware";
 import pool from "../db/mysql";
 
@@ -70,6 +71,7 @@ app.use("/auth", authRoutes);
 app.use("/cart", cartRoutes);
 app.use("/catalog", catalogRoutes);
 app.use("/orders", orderRoutes);
+app.use("/game-requests", gameRequestRoutes);
 app.use("/webhooks", webhookRoutes);
 
 // ── Global error handler ──────────────────────────────────────

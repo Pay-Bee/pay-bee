@@ -160,12 +160,159 @@ function NavSearch() {
   );
 }
 
+function RequestGameModal({ onClose }: { onClose: () => void }) {
+  const [value, setValue] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function handleSubmit() {
+    if (!value.trim()) return;
+    setStatus("loading");
+    setErrorMsg("");
+    try {
+      await api.post("/game-requests", { request_text: value.trim() });
+      setStatus("done");
+    } catch (err: any) {
+      setErrorMsg(err?.response?.data?.error ?? "Something went wrong. Please try again.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      onMouseDown={(e) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose(); }}
+    >
+      <div
+        ref={ref}
+        className="w-full max-w-md rounded-2xl border p-6 shadow-2xl"
+        style={{ background: "#13131f", borderColor: "rgba(251,191,36,0.2)" }}
+      >
+        {status === "done" ? (
+          <div className="flex flex-col items-center gap-4 py-4 text-center">
+            <div
+              className="flex h-14 w-14 items-center justify-center rounded-full"
+              style={{ background: "rgba(251,191,36,0.12)" }}
+            >
+              <svg className="h-7 w-7" style={{ color: "#fbbf24" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-lg font-bold text-white">Thank you for your request!</p>
+              <p className="mt-1.5 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                We've received it and will add it to our store shortly.
+                We'll let you know once it's available.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="mt-2 rounded-xl px-6 py-2 text-sm font-bold text-black transition-colors"
+              style={{ background: "#fbbf24" }}
+            >
+              Got it!
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 mb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div
+                    className="flex h-7 w-7 items-center justify-center rounded-lg flex-shrink-0"
+                    style={{ background: "rgba(251,191,36,0.12)" }}
+                  >
+                    <svg className="h-4 w-4" style={{ color: "#fbbf24" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <h2 className="text-base font-bold text-white">Request a Game</h2>
+                </div>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                  Can't find what you're looking for? Tell us — we'll source it for you.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+                style={{ color: "rgba(255,255,255,0.4)" }}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Input */}
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>
+                Steam URL, App ID, or Game Name
+              </label>
+              <input
+                autoFocus
+                value={value}
+                onChange={(e) => { setValue(e.target.value); if (status === "error") setStatus("idle"); }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+                placeholder="e.g. Red Dead Redemption 2 or store.steampowered.com/app/1091500"
+                className="input-field w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none"
+              />
+              {status === "error" && (
+                <p className="mt-2 text-xs" style={{ color: "#f87171" }}>{errorMsg}</p>
+              )}
+            </div>
+
+            {/* Hint chips */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              {["Steam URL", "App ID", "Game name"].map((hint) => (
+                <span
+                  key={hint}
+                  className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
+                  style={{ borderColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.35)" }}
+                >
+                  {hint}
+                </span>
+              ))}
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={handleSubmit}
+              disabled={!value.trim() || status === "loading"}
+              className="w-full rounded-xl py-3 text-sm font-bold text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed shimmer-btn"
+              style={{ background: "#fbbf24" }}
+            >
+              {status === "loading" ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border border-black/30 border-t-black/80" />
+                  Sending…
+                </span>
+              ) : (
+                "Submit Request"
+              )}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [open, setOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [requestOpen, setRequestOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -213,13 +360,11 @@ export default function Navbar() {
   const displayName = user?.name || user?.email || "";
 
   return (
+    <>
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0a12]/80 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-        <Link
-          href="/"
-          className="text-xl font-black tracking-widest text-yellow-400 uppercase"
-        >
-          PayBee
+        <Link href="/" className="flex items-center">
+          <img src="/logo/pay-bee-logo.png" alt="Pay-Bee" className="h-8 w-auto" />
         </Link>
 
         <div className="flex items-center gap-6 text-sm">
@@ -229,11 +374,35 @@ export default function Navbar() {
           >
             Game Store
           </Link>
+          <Link
+            href="/help"
+            className="font-semibold text-white hover:text-yellow-400 transition-colors"
+          >
+            Help
+          </Link>
         </div>
 
         <NavSearch />
 
         <div className="flex items-center gap-3">
+          {/* Request Game button */}
+          <button
+            onClick={() => {
+              if (!user) {
+                window.location.href = `/login?returnTo=${encodeURIComponent(pathname)}`;
+              } else {
+                setRequestOpen(true);
+              }
+            }}
+            className="flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all hover:border-yellow-400/60 hover:text-yellow-400"
+            style={{ borderColor: "rgba(251,191,36,0.25)", color: "rgba(255,255,255,0.7)" }}
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Request
+          </button>
+
           {/* Cart icon */}
           <button
             onClick={() => {
@@ -344,5 +513,8 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+
+    {requestOpen && <RequestGameModal onClose={() => setRequestOpen(false)} />}
+  </>
   );
 }

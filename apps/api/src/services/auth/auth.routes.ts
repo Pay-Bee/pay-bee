@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import { requireAuth } from "../../gateway/middleware/auth.middleware";
 import {
+  changePassword,
   getCustomerProfile,
   handleGoogleCallback,
   issueTokens,
@@ -175,17 +176,39 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// PATCH /auth/profile — update name, email, or password
+// PATCH /auth/profile — update name and/or email
 router.patch("/profile", requireAuth, async (req: Request, res: Response) => {
   try {
     const customerId = Number(req.user!.sub);
-    const { name, email, currentPassword, newPassword } = req.body as {
-      name?: string;
-      email?: string;
+    const { name, email } = req.body as { name?: string; email?: string };
+    if (email !== undefined && !email.trim()) {
+      res.status(400).json({ error: "Email cannot be empty" });
+      return;
+    }
+    await updateCustomerProfile(customerId, { name, email: email?.trim() });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+// PATCH /auth/password — change password (CUSTOM accounts only)
+router.patch("/password", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const customerId = Number(req.user!.sub);
+    const { currentPassword, newPassword } = req.body as {
       currentPassword?: string;
       newPassword?: string;
     };
-    await updateCustomerProfile(customerId, { name, email, currentPassword, newPassword });
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: "Current and new password are required" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "New password must be at least 8 characters" });
+      return;
+    }
+    await changePassword(customerId, { currentPassword, newPassword });
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
