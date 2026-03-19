@@ -18,7 +18,7 @@
     "bcryptjs": "^2.4.3",
     "google-auth-library": "^9.15.1",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.11.5",
+    "pg": "^8.13.3",
     "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "passport-google-oauth20": "^2.0.0",
@@ -34,6 +34,7 @@
     "@types/node": "^20.17.30",
     "@types/node-cron": "^3.0.11",
     "@types/passport-google-oauth20": "^2.0.16",
+    "@types/pg": "^8.11.11",
     "@types/qs": "^6.9.18",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"

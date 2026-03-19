@@ -1,15 +1,13 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { RowDataPacket } from "mysql2/promise";
-import pool from "../../db/mysql";
+import pool from "../../db/db";
 import { GoogleProfile, JWTPayload, TokenPair } from "shared";
 
 const ACCESS_TTL = parseInt(process.env.JWT_ACCESS_TTL ?? "900", 10);
 const REFRESH_TTL = parseInt(process.env.JWT_REFRESH_TTL ?? "604800", 10);
 
 // ── Google OAuth ───────────────────────────────────────────────
-// STUB: In production, exchange code for ID token via google-auth-library.
 export async function handleGoogleCallback(code: string): Promise<GoogleProfile> {
   if (
     process.env.GOOGLE_CLIENT_ID &&
@@ -44,26 +42,27 @@ export async function handleGoogleCallback(code: string): Promise<GoogleProfile>
 
 // ── Upsert customer (Google sign-in) ──────────────────────────
 export async function upsertUser(profile: GoogleProfile): Promise<{ id: number; email: string }> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT id FROM customers WHERE provider_user_id = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT id FROM customers WHERE provider_user_id = $1 AND active = TRUE",
     [profile.google_id]
   );
 
   if (rows.length > 0) {
-    await pool.execute(
-      "UPDATE customers SET avatar = ?, updated_at = NOW() WHERE provider_user_id = ?",
+    await pool.query(
+      "UPDATE customers SET avatar = $1 WHERE provider_user_id = $2",
       [profile.avatar_url, profile.google_id]
     );
     return { id: Number(rows[0].id), email: profile.email };
   }
 
-  const [result] = await pool.execute(
+  const result = await pool.query(
     `INSERT INTO customers (email, registration_type, provider_user_id, avatar)
-     VALUES (?, 'GOOGLE', ?, ?)`,
+     VALUES ($1, 'GOOGLE', $2, $3)
+     RETURNING id`,
     [profile.email, profile.google_id, profile.avatar_url]
-  ) as any;
+  );
 
-  return { id: result.insertId as number, email: profile.email };
+  return { id: Number(result.rows[0].id), email: profile.email };
 }
 
 // ── Issue JWT + refresh token ──────────────────────────────────
@@ -80,8 +79,8 @@ export async function issueTokens(customerId: number, email: string): Promise<To
   const tokenHash = crypto.createHash("sha256").update(rawRefresh).digest("hex");
   const expiresAt = new Date(Date.now() + REFRESH_TTL * 1000);
 
-  await pool.execute(
-    "INSERT INTO refresh_tokens (customer_id, token_hash, expires_at) VALUES (?, ?, ?)",
+  await pool.query(
+    "INSERT INTO refresh_tokens (customer_id, token_hash, expires_at) VALUES ($1, $2, $3)",
     [customerId, tokenHash, expiresAt]
   );
 
@@ -92,11 +91,11 @@ export async function issueTokens(customerId: number, email: string): Promise<To
 export async function refreshAccessToken(rawRefreshToken: string): Promise<string | null> {
   const tokenHash = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
 
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const { rows } = await pool.query(
     `SELECT rt.customer_id, rt.expires_at, c.email
      FROM refresh_tokens rt
      JOIN customers c ON c.id = rt.customer_id
-     WHERE rt.token_hash = ? AND rt.revoked = 0 AND rt.deleted_at IS NULL`,
+     WHERE rt.token_hash = $1 AND rt.revoked = FALSE AND rt.deleted_at IS NULL`,
     [tokenHash]
   );
 
@@ -117,19 +116,19 @@ export async function registerCustomer(
   email: string,
   password: string
 ): Promise<{ id: number; email: string }> {
-  const [existing] = await pool.execute<RowDataPacket[]>(
-    "SELECT id FROM customers WHERE email = ?",
+  const { rows: existing } = await pool.query(
+    "SELECT id FROM customers WHERE email = $1",
     [email]
   );
-  if ((existing as RowDataPacket[]).length > 0) {
+  if (existing.length > 0) {
     throw new Error("Email already registered");
   }
   const hash = await bcrypt.hash(password, 12);
-  const [result] = await pool.execute(
-    "INSERT INTO customers (email, password, registration_type) VALUES (?, ?, 'CUSTOM')",
+  const result = await pool.query(
+    "INSERT INTO customers (email, password, registration_type) VALUES ($1, $2, 'CUSTOM') RETURNING id",
     [email, hash]
-  ) as any;
-  return { id: result.insertId as number, email };
+  );
+  return { id: Number(result.rows[0].id), email };
 }
 
 // ── Custom login ───────────────────────────────────────────────
@@ -137,8 +136,8 @@ export async function loginCustomer(
   email: string,
   password: string
 ): Promise<{ id: number; email: string }> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT id, email, password FROM customers WHERE email = ? AND registration_type = 'CUSTOM' AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT id, email, password FROM customers WHERE email = $1 AND registration_type = 'CUSTOM' AND active = TRUE",
     [email]
   );
   if (rows.length === 0) throw new Error("Invalid credentials");
@@ -155,8 +154,8 @@ export async function getCustomerProfile(customerId: number): Promise<{
   avatar: string | null;
   registration_type: string;
 }> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT id, email, name, avatar, registration_type FROM customers WHERE id = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT id, email, name, avatar, registration_type FROM customers WHERE id = $1 AND active = TRUE",
     [customerId]
   );
   if (rows.length === 0) throw new Error("Customer not found");
@@ -175,8 +174,8 @@ export async function updateCustomerProfile(
   customerId: number,
   data: { name?: string; email?: string }
 ): Promise<void> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT email FROM customers WHERE id = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT email FROM customers WHERE id = $1 AND active = TRUE",
     [customerId]
   );
   if (rows.length === 0) throw new Error("Customer not found");
@@ -186,26 +185,26 @@ export async function updateCustomerProfile(
   const values: unknown[] = [];
 
   if (data.name !== undefined) {
-    fields.push("name = ?");
+    fields.push(`name = $${fields.length + 1}`);
     values.push(data.name || null);
   }
 
   if (data.email && data.email !== current.email) {
-    const [existing] = await pool.execute<RowDataPacket[]>(
-      "SELECT id FROM customers WHERE email = ? AND id != ?",
+    const { rows: existing } = await pool.query(
+      "SELECT id FROM customers WHERE email = $1 AND id != $2",
       [data.email, customerId]
     );
-    if ((existing as RowDataPacket[]).length > 0) throw new Error("Email already in use");
-    fields.push("email = ?");
+    if (existing.length > 0) throw new Error("Email already in use");
+    fields.push(`email = $${fields.length + 1}`);
     values.push(data.email);
   }
 
   if (fields.length === 0) return;
 
   values.push(customerId);
-  await pool.execute(
-    `UPDATE customers SET ${fields.join(", ")}, updated_at = NOW() WHERE id = ?`,
-    values as string[]
+  await pool.query(
+    `UPDATE customers SET ${fields.join(", ")} WHERE id = $${values.length}`,
+    values
   );
 }
 
@@ -214,8 +213,8 @@ export async function changePassword(
   customerId: number,
   data: { currentPassword: string; newPassword: string }
 ): Promise<void> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT password, registration_type FROM customers WHERE id = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT password, registration_type FROM customers WHERE id = $1 AND active = TRUE",
     [customerId]
   );
   if (rows.length === 0) throw new Error("Customer not found");
@@ -229,8 +228,8 @@ export async function changePassword(
   if (!valid) throw new Error("Current password is incorrect");
 
   const hash = await bcrypt.hash(data.newPassword, 12);
-  await pool.execute(
-    "UPDATE customers SET password = ?, updated_at = NOW() WHERE id = ?",
+  await pool.query(
+    "UPDATE customers SET password = $1 WHERE id = $2",
     [hash, customerId]
   );
 }
@@ -238,8 +237,8 @@ export async function changePassword(
 // ── Logout ─────────────────────────────────────────────────────
 export async function logout(rawRefreshToken: string): Promise<void> {
   const tokenHash = crypto.createHash("sha256").update(rawRefreshToken).digest("hex");
-  await pool.execute(
-    "UPDATE refresh_tokens SET deleted_at = NOW(), revoked = 1 WHERE token_hash = ?",
+  await pool.query(
+    "UPDATE refresh_tokens SET deleted_at = NOW(), revoked = TRUE WHERE token_hash = $1",
     [tokenHash]
   );
 }

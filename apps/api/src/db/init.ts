@@ -1,26 +1,26 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
-import pool from "./mysql";
+import { Client } from "pg";
 
 async function init() {
+  const url = process.env.DATABASE_URL ?? "postgresql://postgres:@localhost:5432/pay_bee";
+  const isLocal = url.includes("localhost");
+
+  const client = new Client({
+    connectionString: url,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+  });
+
+  await client.connect();
+
   const sql = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8");
 
-  // Split on semicolons, filter blanks, run each statement
-  const statements = sql
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith("--"));
-
-  const conn = await pool.getConnection();
   try {
-    for (const stmt of statements) {
-      await conn.execute(stmt);
-    }
+    await client.query(sql);
     console.log("[db] schema initialised successfully");
   } finally {
-    conn.release();
-    await pool.end();
+    await client.end();
   }
 }
 

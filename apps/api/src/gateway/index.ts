@@ -10,7 +10,7 @@ import orderRoutes from "../services/order/order.routes";
 import webhookRoutes from "../services/order/webhook.routes";
 import gameRequestRoutes from "../services/game-requests/game-request.routes";
 import { rateLimiter } from "./middleware/rateLimit.middleware";
-import pool from "../db/mysql";
+import pool from "../db/db";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -18,30 +18,13 @@ const PORT = process.env.PORT ?? 3000;
 async function runMigrations() {
   const schemaPath = path.join(__dirname, "../db/schema.sql");
   const sql = fs.readFileSync(schemaPath, "utf8");
-  const statements = sql
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith("--"));
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   try {
-    await conn.query("SET FOREIGN_KEY_CHECKS = 0");
-    for (const stmt of statements) {
-      try {
-        await conn.query(stmt);
-      } catch (err: any) {
-        // ER_DUP_FIELDNAME (1060) = column already exists — safe to ignore
-        if (err?.errno === 1060) {
-          console.log("[db] column already exists, skipping:", stmt.slice(0, 60));
-        } else {
-          throw err;
-        }
-      }
-    }
-    await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+    await client.query(sql);
     console.log("[db] schema ready");
   } finally {
-    conn.release();
+    client.release();
   }
 }
 

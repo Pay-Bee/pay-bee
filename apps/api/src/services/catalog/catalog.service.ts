@@ -1,5 +1,4 @@
-import { RowDataPacket } from "mysql2/promise";
-import pool from "../../db/mysql";
+import pool from "../../db/db";
 import { getUSDtoLKR, convertUSDtoLKR } from "../../fx/fx.service";
 import catalogCache from "./catalog.cache";
 import { CatalogFilters, Game, GameListItem } from "shared";
@@ -14,7 +13,7 @@ function slugify(title: string): string {
 }
 
 // ── Parse a raw DB row into Game ───────────────────────────────
-function rowToGame(row: RowDataPacket): Game {
+function rowToGame(row: Record<string, unknown>): Game {
   const parse = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : (v ?? []));
   return {
     id: Number(row.id),
@@ -76,7 +75,7 @@ export async function createGame(data: CreateGameInput): Promise<void> {
   // Accept thumbnail_url/hero_image_url as aliases for cover_img_url
   const coverImg = data.cover_img_url ?? data.thumbnail_url ?? null;
 
-  await pool.execute(
+  await pool.query(
     `INSERT INTO games
        (title, slug, short_description, long_description,
         developer, publisher,
@@ -85,7 +84,7 @@ export async function createGame(data: CreateGameInput): Promise<void> {
         cover_img_url, trailer_video_url, screenshots,
         price_usd, price_lkr, fx_rate_used, discount_percent,
         price_updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())`,
     [
       data.title,
       slug,
@@ -124,30 +123,29 @@ export async function listGames(filters: CatalogFilters): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any[] = [];
 
+  function nextParam(value: unknown): string {
+    params.push(value);
+    return `$${params.length}`;
+  }
+
   if (filters.name) {
-    conditions.push("title LIKE ?");
-    params.push(`%${filters.name}%`);
+    conditions.push(`title ILIKE ${nextParam(`%${filters.name}%`)}`);
   }
   if (filters.genre) {
-    conditions.push("JSON_CONTAINS(genres, JSON_QUOTE(?))");
-    params.push(filters.genre);
+    conditions.push(`genres @> ${nextParam(JSON.stringify([filters.genre]))}::jsonb`);
   }
   if (filters.minPrice !== undefined) {
-    conditions.push("price_lkr >= ?");
-    params.push(filters.minPrice);
+    conditions.push(`price_lkr >= ${nextParam(filters.minPrice)}`);
   }
   if (filters.maxPrice !== undefined) {
-    conditions.push("price_lkr <= ?");
-    params.push(filters.maxPrice);
+    conditions.push(`price_lkr <= ${nextParam(filters.maxPrice)}`);
   }
   if (filters.platform) {
-    conditions.push("JSON_CONTAINS(platforms, JSON_QUOTE(?))");
-    params.push(filters.platform);
+    conditions.push(`platforms @> ${nextParam(JSON.stringify([filters.platform]))}::jsonb`);
   }
   if (filters.features) {
     for (const f of filters.features.split(",").map((s) => s.trim()).filter(Boolean)) {
-      conditions.push("JSON_CONTAINS(features, JSON_QUOTE(?))");
-      params.push(f);
+      conditions.push(`features @> ${nextParam(JSON.stringify([f]))}::jsonb`);
     }
   }
 
@@ -161,7 +159,7 @@ export async function listGames(filters: CatalogFilters): Promise<{
 
   const where = conditions.join(" AND ");
 
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const { rows } = await pool.query(
     `SELECT id, title, slug, short_description, genres, platforms,
             price_usd, price_lkr, discount_percent, cover_img_url
      FROM games
@@ -171,15 +169,15 @@ export async function listGames(filters: CatalogFilters): Promise<{
     params
   );
 
-  const [countRows] = await pool.execute<RowDataPacket[]>(
+  const { rows: countRows } = await pool.query(
     `SELECT COUNT(*) AS total FROM games WHERE ${where}`,
     params
   );
 
-  const total = Number((countRows[0] as RowDataPacket).total);
+  const total = Number(countRows[0].total);
   const parse = (v: unknown) => (typeof v === "string" ? JSON.parse(v) : (v ?? []));
 
-  const data: GameListItem[] = (rows as RowDataPacket[]).map((r) => ({
+  const data: GameListItem[] = rows.map((r) => ({
     id: Number(r.id),
     title: r.title as string,
     slug: r.slug as string,
@@ -201,8 +199,8 @@ export async function getGameBySlug(slug: string): Promise<Game | null> {
   const cached = catalogCache.get<Game>(cacheKey);
   if (cached) return cached;
 
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT * FROM games WHERE slug = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT * FROM games WHERE slug = $1 AND active = TRUE",
     [slug]
   );
 
@@ -226,13 +224,12 @@ export interface HomeGameItem {
 }
 
 export async function getBannerGames(): Promise<HomeGameItem[]> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const { rows } = await pool.query(
     `SELECT id, title, slug, short_description, cover_img_url,
             price_usd, price_lkr, discount_percent
-     FROM games WHERE big_banner = TRUE AND active = TRUE`,
-    []
+     FROM games WHERE big_banner = TRUE AND active = TRUE`
   );
-  return (rows as RowDataPacket[]).map((r) => ({
+  return rows.map((r) => ({
     id: Number(r.id),
     title: r.title as string,
     slug: r.slug as string,
@@ -245,13 +242,12 @@ export async function getBannerGames(): Promise<HomeGameItem[]> {
 }
 
 export async function getNewlyAddedGames(): Promise<HomeGameItem[]> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const { rows } = await pool.query(
     `SELECT id, title, slug, short_description, cover_img_url,
             price_usd, price_lkr, discount_percent
-     FROM games WHERE active = TRUE ORDER BY created_at DESC LIMIT 10`,
-    []
+     FROM games WHERE active = TRUE ORDER BY created_at DESC LIMIT 10`
   );
-  return (rows as RowDataPacket[]).map((r) => ({
+  return rows.map((r) => ({
     id: Number(r.id),
     title: r.title as string,
     slug: r.slug as string,
@@ -264,19 +260,19 @@ export async function getNewlyAddedGames(): Promise<HomeGameItem[]> {
 }
 
 export async function getBestSellingGames(): Promise<HomeGameItem[]> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
+  const { rows } = await pool.query(
     `SELECT g.id, g.title, g.slug, g.short_description, g.cover_img_url,
             g.price_usd, g.price_lkr, g.discount_percent,
             COUNT(oi.id) AS order_count
      FROM games g
      JOIN order_items oi ON oi.game_id = g.id
      WHERE g.active = TRUE
-     GROUP BY g.id
+     GROUP BY g.id, g.title, g.slug, g.short_description,
+              g.cover_img_url, g.price_usd, g.price_lkr, g.discount_percent
      ORDER BY order_count DESC
-     LIMIT 10`,
-    []
+     LIMIT 10`
   );
-  return (rows as RowDataPacket[]).map((r) => ({
+  return rows.map((r) => ({
     id: Number(r.id),
     title: r.title as string,
     slug: r.slug as string,
@@ -299,13 +295,13 @@ export interface SearchResult {
 }
 
 export async function searchGames(q: string): Promise<SearchResult[]> {
-  const [rows] = await pool.query<RowDataPacket[]>(
+  const { rows } = await pool.query(
     `SELECT id, slug, title, cover_img_url, price_lkr, discount_percent
      FROM games
-     WHERE active = TRUE AND title LIKE ?
+     WHERE active = TRUE AND title ILIKE $1
      ORDER BY title ASC
      LIMIT 8`,
-    [`%${q}%`],
+    [`%${q}%`]
   );
   return rows.map((r) => ({
     id: Number(r.id),
@@ -321,8 +317,8 @@ export async function searchGames(q: string): Promise<SearchResult[]> {
 export async function getGameById(
   id: number
 ): Promise<{ title: string; price_usd: number; price_lkr: number; discount_percent: number } | null> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT title, price_usd, price_lkr, discount_percent FROM games WHERE id = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT title, price_usd, price_lkr, discount_percent FROM games WHERE id = $1 AND active = TRUE",
     [id]
   );
   if (rows.length === 0) return null;

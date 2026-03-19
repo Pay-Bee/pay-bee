@@ -23,7 +23,7 @@ pay-bee/                         ← monorepo root (npm workspaces)
 |---|---|
 | Frontend | Next.js 16 (App Router), React 19, Tailwind CSS v4 |
 | Backend | Express 4, TypeScript, ts-node |
-| Database | MySQL 8 |
+| Database | PostgreSQL (Supabase) |
 | Auth | JWT (access + refresh tokens via httpOnly cookies), Google OAuth 2.0 |
 | Payments | Payzy, Koko |
 | Monorepo | npm workspaces |
@@ -36,7 +36,7 @@ Make sure the following are installed before setting up locally:
 
 - **Node.js** v18 or higher — [nodejs.org](https://nodejs.org)
 - **npm** v9 or higher (comes with Node)
-- **MySQL 8** — running locally on port `3306`
+- **PostgreSQL** — a Supabase project or local PostgreSQL instance on port `5432`
 
 ---
 
@@ -57,21 +57,16 @@ Run this once from the **root** of the monorepo. It installs packages for all wo
 npm install
 ```
 
-### 3. Create the database
-
-Open your MySQL client and create a database:
-
-```sql
-CREATE DATABASE pay_bee CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 4. Configure environment variables
+### 3. Configure environment variables
 
 Create a single `.env` file in the **root** of the repo (both apps read from here):
 
 ```bash
 # ── Database ──────────────────────────────────────────────────
-DATABASE_URL=mysql://root:yourpassword@localhost:3306/pay_bee
+# Supabase Session Pooler (recommended):
+DATABASE_URL=postgresql://postgres.xxxx:[password]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+# Local PostgreSQL:
+# DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/pay_bee
 
 # ── JWT ───────────────────────────────────────────────────────
 JWT_ACCESS_SECRET=your_access_secret_here
@@ -91,9 +86,11 @@ NODE_ENV=development
 PORT=3001
 ```
 
-> **Tip:** `GOOGLE_CLIENT_ID` is optional. If omitted, Google login is stubbed and still works in development.
+> **Supabase tip:** Use the **Session Pooler** URL from Supabase Dashboard → Project Settings → Database → Connection pooling → Session mode. This uses IPv4 and is required on Windows.
+>
+> **`GOOGLE_CLIENT_ID`** is optional. If omitted, Google login is stubbed and still works in development.
 
-### 5. Run database migrations
+### 4. Run database migrations
 
 The API auto-runs the schema on startup, but you can also run it manually:
 
@@ -103,7 +100,7 @@ npm run db:init --workspace=apps/api
 
 This creates all tables (`customers`, `games`, `orders`, `cart_items`, `game_requests`, etc.) using `apps/api/src/db/schema.sql`.
 
-### 6. (Optional) Seed the database
+### 5. (Optional) Seed the database
 
 Populate the database with sample game data:
 
@@ -111,7 +108,7 @@ Populate the database with sample game data:
 npm run seed --workspace=apps/api
 ```
 
-### 7. Start the development servers
+### 6. Start the development servers
 
 Run both the API and the web app at the same time from the root:
 
@@ -187,9 +184,9 @@ The API runs on `http://localhost:3001`. All endpoints are prefixed as shown bel
 ```
 apps/api/src/
 ├── db/
-│   ├── schema.sql          ← Full MySQL schema (auto-run on startup)
+│   ├── schema.sql          ← PostgreSQL schema (auto-run on startup)
 │   ├── init.ts             ← DB init script (npm run db:init)
-│   └── mysql.ts            ← mysql2 connection pool
+│   └── db.ts               ← pg connection pool
 ├── gateway/
 │   ├── index.ts            ← Express app entry point, middleware, route registration
 │   └── middleware/
@@ -227,24 +224,24 @@ packages/shared/src/
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABASE_URL` | Yes | `mysql://root:@localhost:3306/pay_bee` | MySQL connection string |
+| `DATABASE_URL` | Yes | `postgresql://postgres:@localhost:5432/pay_bee` | PostgreSQL connection string |
 | `JWT_ACCESS_SECRET` | Yes | — | Secret for signing access tokens |
 | `JWT_REFRESH_SECRET` | Yes | — | Secret for signing refresh tokens |
-| `PORT` | No | `3000` | API server port |
+| `PORT` | No | `3001` | API server port |
 | `NODE_ENV` | No | `development` | Set to `production` for secure cookies |
 | `GOOGLE_CLIENT_ID` | No | — | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | No | — | Google OAuth client secret |
 | `GOOGLE_CALLBACK_URL` | No | `http://localhost:3001/auth/google/callback` | OAuth redirect URI |
-| `NEXT_PUBLIC_API_URL` | No | `http://localhost:3000` | API base URL used by the frontend |
+| `NEXT_PUBLIC_API_URL` | No | `http://localhost:3001` | API base URL used by the frontend |
 | `FRONTEND_URL` | No | `http://localhost:3000` | Allowed CORS origin |
 
 ---
 
 ## Common Issues
 
-**`ER_ACCESS_DENIED_ERROR`** — Wrong MySQL username or password in `DATABASE_URL`.
+**`ENOTFOUND db.xxx.supabase.co`** — You are using the direct connection URL. Switch to the **Session Pooler URL** from Supabase Dashboard → Project Settings → Database → Connection pooling → Session mode.
 
-**`connect ECONNREFUSED 127.0.0.1:3306`** — MySQL is not running. Start it with `brew services start mysql` (macOS) or `net start MySQL80` (Windows).
+**`connect ECONNREFUSED 127.0.0.1:5432`** — Local PostgreSQL is not running. Start it with `brew services start postgresql` (macOS) or `net start postgresql` (Windows).
 
 **`Cannot find module 'shared'`** — Run `npm install` from the repo root to link workspace packages.
 

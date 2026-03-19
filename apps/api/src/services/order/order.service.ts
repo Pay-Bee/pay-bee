@@ -1,5 +1,4 @@
-import { RowDataPacket } from "mysql2/promise";
-import pool from "../../db/mysql";
+import pool from "../../db/db";
 import { getGameById } from "../catalog/catalog.service";
 import { CreateOrderRequest, Order, OrderItem, OrderStatus, OrdersListResponse } from "shared";
 
@@ -18,17 +17,18 @@ export async function createOrder(
     if (!games[i]) throw new Error(`Game not found: ${data.game_ids[i]}`);
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   try {
-    await conn.beginTransaction();
+    await client.query("BEGIN");
 
-    const [orderResult] = await conn.execute(
+    const orderResult = await client.query(
       `INSERT INTO orders
          (customer_id, status,
           billing_first_name, billing_last_name, billing_mobile,
           billing_address, billing_city, billing_state, billing_zip,
           steam_profile, steam_friend_code)
-       VALUES (?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, 'PENDING', $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id`,
       [
         customerId,
         data.billing_first_name,
@@ -41,27 +41,27 @@ export async function createOrder(
         data.steam_profile,
         data.steam_friend_code,
       ]
-    ) as any;
+    );
 
-    const orderId = orderResult.insertId as number;
+    const orderId = Number(orderResult.rows[0].id);
 
     for (let i = 0; i < data.game_ids.length; i++) {
       const game = games[i]!;
-      await conn.execute(
+      await client.query(
         `INSERT INTO order_items
            (order_id, game_id, price_usd, price_lkr, discount_percent)
-         VALUES (?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5)`,
         [orderId, data.game_ids[i], game.price_usd, game.price_lkr, game.discount_percent]
       );
     }
 
-    await conn.commit();
+    await client.query("COMMIT");
     return { orderId };
   } catch (err) {
-    await conn.rollback();
+    await client.query("ROLLBACK");
     throw err;
   } finally {
-    conn.release();
+    client.release();
   }
 }
 
@@ -74,22 +74,22 @@ export async function getOrdersByCustomer(
   const offset = (page - 1) * pageSize;
 
   // Total count
-  const [countRows] = await pool.execute<RowDataPacket[]>(
-    "SELECT COUNT(*) AS total FROM orders WHERE customer_id = ? AND active = TRUE",
+  const { rows: countRows } = await pool.query(
+    "SELECT COUNT(*) AS total FROM orders WHERE customer_id = $1 AND active = TRUE",
     [customerId]
   );
   const total = Number(countRows[0].total);
 
   if (total === 0) return { orders: [], total: 0, page, pageSize };
 
-  const [orderRows] = await pool.execute<RowDataPacket[]>(
+  const { rows: orderRows } = await pool.query(
     `SELECT id, customer_id, status,
             billing_first_name, billing_last_name, billing_mobile,
             billing_address, billing_city, billing_state, billing_zip,
             steam_profile, steam_friend_code,
             created_at, updated_at
      FROM orders
-     WHERE customer_id = ? AND active = TRUE
+     WHERE customer_id = $1 AND active = TRUE
      ORDER BY created_at DESC
      LIMIT ${pageSize} OFFSET ${offset}`,
     [customerId]
@@ -98,9 +98,9 @@ export async function getOrdersByCustomer(
   if (orderRows.length === 0) return { orders: [], total, page, pageSize };
 
   const orderIds = orderRows.map((r) => r.id as number);
-  const placeholders = orderIds.map(() => "?").join(",");
+  const placeholders = orderIds.map((_, i) => `$${i + 1}`).join(",");
 
-  const [itemRows] = await pool.execute<RowDataPacket[]>(
+  const { rows: itemRows } = await pool.query(
     `SELECT oi.id, oi.order_id, oi.game_id, oi.price_usd, oi.price_lkr, oi.discount_percent, oi.created_at,
             g.title, g.cover_img_url
      FROM order_items oi
@@ -152,8 +152,8 @@ export async function updateOrderStatus(
   orderId: number,
   status: Order["status"]
 ): Promise<void> {
-  await pool.execute(
-    "UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?",
+  await pool.query(
+    "UPDATE orders SET status = $1 WHERE id = $2",
     [status, orderId]
   );
 }
@@ -163,8 +163,8 @@ export async function deleteOrder(
   orderId: number,
   customerId: number
 ): Promise<{ ok: boolean; error?: string }> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
-    "SELECT status FROM orders WHERE id = ? AND customer_id = ? AND active = TRUE",
+  const { rows } = await pool.query(
+    "SELECT status FROM orders WHERE id = $1 AND customer_id = $2 AND active = TRUE",
     [orderId, customerId]
   );
   if (rows.length === 0) return { ok: false, error: "Order not found" };
@@ -172,8 +172,8 @@ export async function deleteOrder(
   if (status !== "DONE" && status !== "CANCELED") {
     return { ok: false, error: "Only DONE or CANCELED orders can be removed" };
   }
-  await pool.execute(
-    "UPDATE orders SET active = FALSE, updated_at = NOW() WHERE id = ? AND customer_id = ?",
+  await pool.query(
+    "UPDATE orders SET active = FALSE WHERE id = $1 AND customer_id = $2",
     [orderId, customerId]
   );
   return { ok: true };

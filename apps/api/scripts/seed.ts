@@ -7,7 +7,7 @@
  *   npm run seed
  */
 
-import pool from "../src/db/mysql";
+import pool from "../src/db/db";
 import { createGame } from "../src/services/catalog/catalog.service";
 
 const GAMES = [

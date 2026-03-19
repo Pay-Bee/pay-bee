@@ -13,7 +13,9 @@
       "Bash(node -e \"require\\(''''d:/pay-bee/apps/api/node_modules/bcryptjs''''\\)\")",
       "Bash(ls d:/pay-bee/apps/web/app/\\\\\\(auth\\\\\\)/)",
       "Bash(xargs grep:*)",
-      "Bash(find d:/pay-bee/apps/web/app/catalog -type f -name *.tsx -o -name *.ts)"
+      "Bash(find d:/pay-bee/apps/web/app/catalog -type f -name *.tsx -o -name *.ts)",
+      "Bash(npm uninstall:*)",
+      "Bash(grep -r DATABASE_URL /d/pay-bee --include=*.md --include=.env* -n)"
     ]
   }
 }

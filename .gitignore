@@ -12,7 +12,6 @@ node_modules/
 .env
 .env.local
 .env.production
-.env*
 
 # Next.js
 apps/web/.next/
