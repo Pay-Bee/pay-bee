@@ -9,7 +9,9 @@
     "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
-    "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
+    "build": "npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "start": "node apps/api/dist/gateway/index.js",
     "install:all": "npm install"
   }
 }

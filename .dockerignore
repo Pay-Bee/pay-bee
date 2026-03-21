@@ -1,0 +1,15 @@
+.git
+.env
+*.log
+
+# Skip frontend — API-only image
+apps/web
+
+# Skip local node_modules — Docker installs its own
+node_modules
+apps/api/node_modules
+packages/shared/node_modules
+
+# Skip compiled output — builder stage produces it fresh
+dist
+apps/api/dist

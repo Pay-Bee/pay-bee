@@ -4,7 +4,7 @@
   "main": "dist/gateway/index.js",
   "scripts": {
     "dev": "ts-node -r ./preload.js --project tsconfig.json src/gateway/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp src/db/schema.sql dist/db/schema.sql",
     "start": "node dist/gateway/index.js",
     "db:init": "ts-node -r ./preload.js --project tsconfig.json src/db/init.ts",
     "seed": "ts-node -r ./preload.js --project tsconfig.json scripts/seed.ts"
