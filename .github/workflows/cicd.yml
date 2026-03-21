@@ -12,7 +12,8 @@ on:
 env:
   REGION: asia-southeast1
   SERVICE: pay-bee-api
-  IMAGE: asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/pay-bee/api
+  PROJECT_ID: pay-bee
+  IMAGE: asia-southeast1-docker.pkg.dev/pay-bee/pay-bee/api
 
 jobs:
   deploy:
