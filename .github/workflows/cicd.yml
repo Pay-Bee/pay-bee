@@ -3,11 +3,6 @@ name: Deploy API
 on:
   push:
     branches: [main]
-    paths:
-      - "apps/api/**"
-      - "packages/shared/**"
-      - "Dockerfile"
-      - ".dockerignore"
 
 env:
   REGION: asia-southeast1
