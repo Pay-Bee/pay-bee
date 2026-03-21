@@ -145,29 +145,78 @@ Run these from the **monorepo root**:
 
 ---
 
-## API Overview
+## API Reference
 
-The API runs on `http://localhost:3001`. All endpoints are prefixed as shown below.
+The API runs on `http://localhost:3001` locally and on your Cloud Run URL in production.
+Endpoints marked with 🔒 require a valid JWT access token (httpOnly cookie or `Authorization: Bearer` header).
 
-| Prefix | Description |
+### Health & Auth
+
+| Endpoint | Description |
 |---|---|
+| `GET /` | Health check — returns `{"status":"ok","service":"pay-bee-api"}` |
 | `POST /auth/register` | Register with email + password |
 | `POST /auth/login` | Login with email + password |
 | `GET /auth/google` | Redirect to Google OAuth consent screen |
-| `GET /auth/me` | Get current authenticated user profile |
-| `PATCH /auth/profile` | Update name / email |
-| `PATCH /auth/password` | Change password (custom accounts only) |
-| `POST /auth/logout` | Clear auth cookies |
-| `GET /catalog` | List games (with filters, pagination) |
-| `GET /catalog/:slug` | Get a single game by slug |
-| `GET /catalog/search?q=` | Search games by name |
-| `GET /cart` | Get current user's cart |
-| `POST /cart` | Add a game to cart |
-| `DELETE /cart/:gameId` | Remove a game from cart |
-| `POST /orders` | Create a new order |
-| `GET /orders` | Get current user's order history |
-| `DELETE /orders/:id` | Remove a DONE/CANCELED order from history |
-| `POST /game-requests` | Submit a game request (auth required) |
+| `GET /auth/google/callback` | Google OAuth callback — exchanges code for tokens |
+| `POST /auth/refresh` | Issue new access token using refresh_token cookie |
+| `POST /auth/logout` | Clear auth cookies (revokes refresh token) |
+| `GET /auth/me` 🔒 | Get current authenticated user profile |
+| `PATCH /auth/profile` 🔒 | Update name / email |
+| `PATCH /auth/password` 🔒 | Change password (custom accounts only) |
+
+### Catalog
+
+| Endpoint | Description |
+|---|---|
+| `GET /catalog` | List games — filters: `genre`, `name`, `platform`, `sort`, `minPrice`, `maxPrice`, `page` |
+| `GET /catalog/search?q=` | Instant search by name (min 2 chars) |
+| `GET /catalog/banners` | Games flagged for homepage banner |
+| `GET /catalog/new` | 10 newest games |
+| `GET /catalog/best-sellers` | 10 most ordered games |
+| `GET /catalog/:slug` | Full game detail by slug |
+| `POST /catalog` | Add a new game (admin) |
+
+### Cart, Orders & Requests
+
+| Endpoint | Description |
+|---|---|
+| `GET /cart` 🔒 | Get current user's active cart items |
+| `POST /cart` 🔒 | Add game to cart (or reactivate if removed) |
+| `DELETE /cart/:gameId` 🔒 | Remove game from cart |
+| `POST /orders` 🔒 | Create a new order from `game_ids` array |
+| `GET /orders` 🔒 | Get current user's order history (paginated) |
+| `DELETE /orders/:id` 🔒 | Remove a DONE/CANCELED order from history |
+| `POST /game-requests` 🔒 | Submit a game request (`request_text`, max 512 chars) |
+
+### Webhooks
+
+| Endpoint | Description |
+|---|---|
+| `POST /webhooks/koko/response` | Koko payment webhook |
+| `GET /webhooks/koko/return` | Koko payment return redirect |
+| `GET /webhooks/koko/cancel` | Koko payment cancel redirect |
+| `POST /webhooks/mintpay/response` | Mintpay payment webhook |
+
+### Testing Cloud Run
+
+Run these to verify each layer is working:
+
+```bash
+# 1. Server is alive
+curl https://YOUR-CLOUD-RUN-URL/
+
+# 2. Database is connected (queries Supabase)
+curl https://YOUR-CLOUD-RUN-URL/catalog/new
+
+# 3. Search works
+curl "https://YOUR-CLOUD-RUN-URL/catalog/search?q=cyber"
+
+# 4. Filters work (JSONB query)
+curl "https://YOUR-CLOUD-RUN-URL/catalog?genre=action"
+```
+
+> If `/` returns `{"status":"ok"}` but `/catalog/new` fails → database env vars are not set on Cloud Run.
 
 ---
 
