@@ -4,7 +4,7 @@ import catalogCache from "./catalog.cache";
 import { CatalogFilters, Game, GameListItem } from "shared";
 
 // ── Helper: slugify a game title ──────────────────────────────
-function slugify(title: string): string {
+export function slugify(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")

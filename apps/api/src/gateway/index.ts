@@ -11,6 +11,7 @@ import webhookRoutes from "../services/order/webhook.routes";
 import gameRequestRoutes from "../services/game-requests/game-request.routes";
 import { rateLimiter } from "./middleware/rateLimit.middleware";
 import pool from "../db/db";
+import { startScheduler } from "../jobs/scheduler";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -65,6 +66,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 
 runMigrations()
   .then(() => {
+    startScheduler();
     app.listen(PORT, () => {
       console.log(`[pay-bee-api] listening on http://localhost:${PORT}`);
     });
