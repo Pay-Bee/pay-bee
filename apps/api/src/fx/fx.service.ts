@@ -20,7 +20,7 @@ export async function getUSDtoLKR(): Promise<number> {
       `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`
     );
     const data = await res.json() as { conversion_rates: Record<string, number> };
-    const rate: number = data.conversion_rates.LKR ?? FALLBACK_RATE;
+    const rate: number = data.conversion_rates?.LKR ?? FALLBACK_RATE;
     fxCache.set("USD_LKR", rate);
     return rate;
   } catch (err) {

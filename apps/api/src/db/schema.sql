@@ -71,6 +71,9 @@ CREATE OR REPLACE TRIGGER trg_games_updated_at
   BEFORE UPDATE ON games
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_games_steam_app_id
+  ON games(steam_app_id) WHERE steam_app_id IS NOT NULL;
+
 -- ── cart_items ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS cart_items (
   id           BIGSERIAL        PRIMARY KEY,
