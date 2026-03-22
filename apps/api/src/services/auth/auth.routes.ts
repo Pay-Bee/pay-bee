@@ -107,8 +107,7 @@ router.get("/google/callback", async (req: Request, res: Response) => {
     );
 
     const frontendUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(":3001", ":3000") ??
-      "http://localhost:3000";
+      process.env.FRONTEND_URL ?? "http://localhost:3000";
 
     res
       .cookie("access_token", accessToken, {
