@@ -18,7 +18,7 @@ const router = Router();
 const COOKIE_OPTS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "lax" as const,
+  sameSite: (process.env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
 };
 
 // POST /auth/register — create account with email + password
